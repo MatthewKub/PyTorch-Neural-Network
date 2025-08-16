@@ -13,7 +13,7 @@ print(f"Using {device} device")
 print("Torch Version: ", torch.__version__)
 print("CUDA Available:", torch.cuda.is_available(), "\n")
 
-
+# Neural Network Model 
 class NeuralNetwork(nn.Module) :
 
     def __init__(self, *args, **kwargs) :
@@ -42,8 +42,9 @@ training_ds = datasets.MNIST(root = 'data', train = True, download = True, trans
 test_ds = datasets.MNIST(root = 'data', train = False, download = True, transform = ToTensor()) 
 
 loaders = {
-    'train' : DataLoader(training_ds, batch_size = 100, shuffle = True, num_workers = 1),
-    'test' : DataLoader(test_ds, batch_size = 100, shuffle = True, num_workers = 1),
+    
+    'train' : DataLoader(training_ds, batch_size = 100, shuffle = True, num_workers = 0),
+    'test' : DataLoader(test_ds, batch_size = 100, shuffle = True, num_workers = 0),
 }
 
 # Training 
@@ -53,11 +54,35 @@ loss_function = nn.CrossEntropyLoss()
 def train(epoch) :
     model.train()
     for batch_index, (data, target) in enumerate(loaders['train']):
-        data, target = data.to(device), target.to(device)
+        data = data.to(device)
+        target = target.to(device)
         optimizer.zero_grad()
         output = model(data) # Current state of training before 
         loss = loss_function(output, target)
         loss.backward() # Back propigation 
         optimizer.step()
         if batch_index % 20 == 0 :
-            print(f'Train Epoch: {epoch} [{batch_index * len(data)}/{len(loaders['train'].dataset)}  ({100. *  batch_index / len(loaders['train']):.0f}%)]\t{loss.item():.6f}')
+            print(f'Train Epoch: {epoch} [{batch_index * len(data)}/{len(loaders["train"].dataset)}  ({100. *  batch_index / len(loaders["train"]):.0f}%)]\t{loss.item():.6f}')
+
+
+# Testing 
+def test() :
+  model.eval()
+  test_loss = 0
+  correct = 0
+
+  with torch.no_grad() :
+    for data, target in loaders['test'] :
+        data = data.to(device)
+        target = target.to(device)
+        output = model(data)
+        test_loss += loss_function(output, target).item()
+        pred = output.argmax(dim = 1, keepdim = True)
+        correct += pred.eq(target.view_as(pred)).sum().item()
+        
+    test_loss /= len(loaders['test'].dataset)
+    print(f'\nTest set: Average loss: {test_loss:.4f}, Accuracy {correct}/{len(loaders["test"].dataset)} ({100. * correct / len(loaders["test"].dataset):.0f}%\n)')
+
+for epoch in range(1, 11) :
+    train(epoch)
+    test()
