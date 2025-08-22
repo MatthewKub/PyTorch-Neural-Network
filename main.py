@@ -37,7 +37,7 @@ model = NeuralNetwork().to(device)
 print(model)
 
 
-# Loading Data 
+# Loading Data & Creating Storage 
 training_ds = datasets.MNIST(root = 'data', train = True, download = True, transform = ToTensor())
 test_ds = datasets.MNIST(root = 'data', train = False, download = True, transform = ToTensor()) 
 
@@ -46,6 +46,9 @@ loaders = {
     'train' : DataLoader(training_ds, batch_size = 100, shuffle = True, num_workers = 0),
     'test' : DataLoader(test_ds, batch_size = 100, shuffle = True, num_workers = 0),
 }
+
+epoch_losses = []
+epoch_accuracies = []
 
 # Training 
 optimizer = optim.Adam(model.parameters(), lr = 0.001) #lr -- Learning Rate 
@@ -61,7 +64,7 @@ def train(epoch) :
         loss = loss_function(output, target)
         loss.backward() # Back propigation 
         optimizer.step()
-        if batch_index % 20 == 0 :
+        if batch_index % 200 == 0 or batch_index == len(loaders["train"]) - 1 :
             print(f'Train Epoch: {epoch} [{batch_index * len(data)}/{len(loaders["train"].dataset)}  ({100. *  batch_index / len(loaders["train"]):.0f}%)]\t{loss.item():.6f}')
 
 
@@ -81,8 +84,18 @@ def test() :
         correct += pred.eq(target.view_as(pred)).sum().item()
         
     test_loss /= len(loaders['test'].dataset)
+    accuracy = 100. * correct / len(loaders['test'].dataset)
     print(f'\nTest set: Average loss: {test_loss:.4f}, Accuracy {correct}/{len(loaders["test"].dataset)} ({100. * correct / len(loaders["test"].dataset):.0f}%\n)')
+
+    return test_loss, accuracy
 
 for epoch in range(1, 11) :
     train(epoch)
-    test()
+    loss, accuracy = test()
+    epoch_losses.append(loss)
+    epoch_accuracies.append(accuracy)
+
+avg_loss = sum(epoch_losses) / len(epoch_losses)
+avg_accuracy = sum(epoch_accuracies) / len(epoch_accuracies)
+print(f"Final average loss: {avg_loss:.5f}")
+print(f"Final average accuracy: {avg_accuracy:.1f}%")
